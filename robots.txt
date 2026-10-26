@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://serhii-kozin-mobile.github.io/sitemap.xml

@@ -1,0 +1,28 @@
+{
+ "name": "Serhii Builds",
+ "short_name": "Serhii Builds",
+ "description": "Building AI agents and dev tools. Build logs on agents in production: real costs, real failures, and what actually holds up.",
+ "start_url": "/",
+ "scope": "/",
+ "display": "browser",
+ "background_color": "#0b0d12",
+ "theme_color": "#0b0d12",
+ "lang": "en",
+ "icons": [
+  {
+   "src": "/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "/favicon.svg",
+   "sizes": "any",
+   "type": "image/svg+xml"
+  }
+ ]
+}
