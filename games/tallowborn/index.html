@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0A08">
+<title>TALLOWBORN</title>
+<link rel="canonical" href="https://serhii-kozin-mobile.github.io/games/tallowborn/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Serhii Builds">
+<meta property="og:title" content="TALLOWBORN: Dark occult roguelite">
+<meta property="og:description" content="You are a knight of living wax, and your body is the board. Every candle that burns out drips down your body and fuses its power into the candle below.">
+<meta property="og:url" content="https://serhii-kozin-mobile.github.io/games/tallowborn/">
+<meta property="og:image" content="https://serhii-kozin-mobile.github.io/og/tallowborn.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@SerhiiBuilds">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+<meta name="description" content="You are a knight of living wax. Every candle you burn drips down your body and fuses its power into the candle below.">
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bgimg"></div>
+<canvas id="bg"></canvas>
+<div id="app">
+  <header id="top">
+    <div id="brand">TALLOW<em>BORN</em></div>
+    <div id="path" aria-label="doors"></div>
+    <div id="dial" title="Light">
+      <svg viewBox="0 0 120 66" aria-hidden="true">
+        <path class="seg gloom" d="M10 60 A50 50 0 0 1 32 19"/>
+        <path class="seg glow" d="M35 17 A50 50 0 0 1 85 17"/>
+        <path class="seg blaze" d="M88 19 A50 50 0 0 1 110 60"/>
+        <g id="needle"><line x1="60" y1="60" x2="60" y2="18"/><circle cx="60" cy="60" r="5"/></g>
+      </svg>
+      <div id="dialTxt"><b id="lightNum">0</b><span id="bandName">GLOOM</span></div>
+    </div>
+    <button id="mute" class="icon" aria-label="Sound">♪</button>
+  </header>
+  <main id="stage">
+    <section id="foeBox">
+      <div id="foe"></div>
+      <div id="foeInfo">
+        <div id="foeName">—</div>
+        <div id="foeBar"><i id="foeHp"></i><span id="foeHpTxt"></span></div>
+        <div id="intent"></div>
+      </div>
+    </section>
+    <section id="bodyBox">
+      <div id="effigy"></div>
+      <div id="lean" role="group" aria-label="Lean">
+        <button data-lean="left" title="Lean left: wax runs to your left side">◀ Lean</button>
+        <button data-lean="upright" class="on" title="Stand upright: wax splits evenly">Upright</button>
+        <button data-lean="right" title="Lean right: wax runs to your right side">Lean ▶</button>
+      </div>
+    </section>
+    <aside id="side">
+      <div class="stat" id="poolStat"><span class="k">Wax pool</span><b id="pool">0</b></div>
+      <div class="stat" id="wardStat"><span class="k">Ward</span><b id="ward">0</b></div>
+      <div class="stat" id="furyStat"><span class="k">Fury</span><b id="fury">0</b></div>
+      <div id="log"></div>
+      <div id="legend">
+        <p><b>Crown</b> +1 light · <b>Arms</b> blows +1 · <b>Heart</b> ward &amp; mend ×2 · <b>Legs</b> +1 wick</p>
+        <p>A candle that burns out drips down your body and fuses its first sigil into the candle below.</p>
+      </div>
+    </aside>
+  </main>
+  <footer id="bar">
+    <div id="tallow" aria-label="tallow"></div>
+    <div id="hand"></div>
+    <div id="acts">
+      <button id="pinchBtn" title="1 tallow: snuff a candle now so it drips">Pinch <small>1</small></button>
+      <button id="recastBtn" title="1 tallow + pool wax: re-cast a lost limb (4) or patch a part (2)">Recast <small>1</small></button>
+      <button id="endBtn" class="primary">Burn <span>▸</span></button>
+    </div>
+  </footer>
+</div>
+<canvas id="fx"></canvas>
+<div id="seen"><span>IT CAN SEE YOU NOW</span></div>
+<div id="overlay"></div>
+<div id="drag"></div>
+<script src="game.js"></script>
+</body>
+</html>
