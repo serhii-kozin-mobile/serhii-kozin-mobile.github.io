@@ -324,3 +324,11 @@ button{font-family:var(--cap);color:var(--bone);cursor:pointer}
 #endBtn{background:linear-gradient(180deg,#A3162D,#7A0E20);letter-spacing:.12em;box-shadow:0 8px 20px #A3162D73}
 #hand .card .tx{color:#E8DCC2}
 body:has(#coach.show) #log{visibility:hidden}
+
+/* r3: painted candle sprites on cards, foe portraits on doors */
+.card .glyph.spr{width:58%;background:center bottom/contain no-repeat;filter:drop-shadow(0 0 8px #ff8a3c55)}
+.card .glyph.spr::before,.card .glyph.spr::after{display:none}
+.door .portrait{display:block;width:118px;height:118px;margin:4px auto -30px;border-radius:50%;background:#0d0b08 center/cover no-repeat;border:1px solid #4a3f33;box-shadow:0 0 22px #000,inset 0 0 18px #000c}
+.door.elite .portrait{border-color:#7a2230}.door.boss .portrait{border-color:#a3202f;box-shadow:0 0 26px #6e142388}
+@media (max-width:700px){.door .portrait{width:84px;height:84px;margin-bottom:-18px}}
+@media (max-height:500px){.door .portrait{width:64px;height:64px;margin-bottom:-16px}}

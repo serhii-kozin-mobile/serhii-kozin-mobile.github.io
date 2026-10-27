@@ -64,6 +64,13 @@ const FOES = {
   bell:   { n:'Bell-Ringer', hp:74, lore:'Its breath gutters your brightest flame.', pat:[['strike',8],['breath'],['strike',9],['smother',1],['breath'],['multi',4,2]], shape:'bell' },
   choir:  { n:'Choir of Wax', hp:74, lore:'Sings ash into your candles.', pat:[['smother',2],['multi',4,2],['ward',8],['strike',10]], shape:'choir' },
   eater:  { n:'The Wick-Eater', hp:140, elite:true, lore:'Devours your shortest candle. Gnaws your weakest limb.', pat:[['devour'],['sever',11],['multi',5,2],['ward',10],['devour'],['strike',13]], shape:'maw' },
+  // r3: foes that join from the second run on (run 1, the tutorial-length path, is unchanged)
+  hound:  { n:'Wax Hound', hp:46, lore:'It hunts by the smell of hot tallow. Bites twice.', pat:[['multi',2,3],['strike',6],['ward',4],['multi',3,2]], shape:'maw' },
+  monk:   { n:'Censer Monk', hp:72, lore:'Swings smoke that chokes your brightest flame.', pat:[['breath'],['strike',8],['smother',1],['multi',3,3],['ward',7]], shape:'hood' },
+  knight: { n:'Bone Knight', hp:80, lore:'Armoured in old ribs. Hits slow and hard.', pat:[['ward',8],['heavy',12],['strike',7],['sever',9]], shape:'hood' },
+  saint:  { n:'Drowned Saint', hp:70, lore:'Her halo drips. Every song leaves ash.', pat:[['smother',1],['strike',9],['ward',6],['multi',4,2]], shape:'choir' },
+  witch:  { n:'Tallow Witch', hp:64, lore:'She stirs spilled wax back into curses.', pat:[['smother',1],['multi',2,4],['breath'],['strike',9],['ward',6]], shape:'hood' },
+  mother: { n:'The Candle Mother', hp:300, boss:true, lore:'Every candle was her child once. She wants them back.', pat:[['multi',4,3],['smother',2],['heavy',16],['breath'],['strike',12],['sever',12],['ward',14],['strike',10]], shape:'king' },
   king:   { n:'The Unlit King', hp:300, boss:true, lore:'He was the last flame. He forgot why.', pat:[['strike',10],['breath'],['heavy',16],['smother',2],['multi',5,3],['sever',12],['strike',12],['ward',14]], shape:'king' },
 };
 /* the body: six sockets. u,v = candle base inside the effigy box (0..1) */
@@ -95,20 +102,20 @@ function fury() { return LIMBS.filter(p => !alive(p)).length; }
 
 function newRun() {
   rnd = mulberry32(S ? (SEED + (S.runNo||0) * 7919) >>> 0 : SEED);
-  const runNo = S ? (S.runNo||0) + 1 : 1;
-  const mid = shuffle(['moth','bell','choir']);
+  const runNo = S ? (S.runNo||0) + 1 : Math.max(1, +Q.get('run') || 1); // ?run=N previews a later run's path (testing)
+  const later = runNo > 1, mid = later ? shuffle(['moth','bell','choir','monk','knight','saint','witch']) : shuffle(['moth','bell','choir']);
   const body = {}; for (const p of ORDER) body[p] = { wax: PARTS[p].max, max: PARTS[p].max };
   S = {
     runNo, body, pool: 0, step: 0,
     deck: ['stub','stub','stub','votive','votive','censer','martyr','briar','weep'].map(mkCard),
     path: [
-      { type:'fight', foes:['pilgrim'] },
+      { type:'fight', foes: later ? ['pilgrim','hound'] : ['pilgrim'] },
       { type:'fight', foes:[mid[0], mid[1]] },
       { type:'shrine' },
-      { type:'fight', foes:[mid[2], mid[0] === 'moth' ? 'bell' : 'moth'].filter((v,i,a)=>a.indexOf(v)===i) },
+      { type:'fight', foes: later ? [mid[2], mid[3]] : [mid[2], mid[0] === 'moth' ? 'bell' : 'moth'].filter((v,i,a)=>a.indexOf(v)===i) },
       { type:'fight', foes:['eater'] },
       { type:'shrine' },
-      { type:'fight', foes:['king'] },
+      { type:'fight', foes:[later && runNo % 2 === 0 ? 'mother' : 'king'] },
     ],
     fusions: 0, maxLight: 0, turns: 0, kills: 0, lost: 0, recasts: 0, start: Date.now(), beaten: [], lean: 'upright',
   };
@@ -124,7 +131,7 @@ function renderPath() {
   if (!S) return;
   S.path.forEach((p, i) => {
     const s = document.createElement('span');
-    s.textContent = p.type === 'shrine' ? '✝' : (p.foes[0] === 'king' ? '♛' : p.foes[0] === 'eater' ? '☠' : '◆');
+    s.textContent = p.type === 'shrine' ? '✝' : (FOES[p.foes[0]].boss ? '♛' : FOES[p.foes[0]].elite ? '☠' : '◆');
     s.title = p.type === 'shrine' ? 'Shrine' : p.foes.map(f => FOES[f].n).join(' / ');
     if (i < S.step) s.className = 'done'; else if (i === S.step) s.className = 'now';
     el.appendChild(s);
@@ -139,12 +146,14 @@ function nextStep() {
   if (p.foes.length === 1) return startFight(p.foes[0]);
   const used = new Set(S.beaten);
   const opts = p.foes.filter(f => !used.has(f));
+  if (window.TB3D) TB3D.preload(opts);
   if (opts.length <= 1) return startFight(opts[0] || p.foes[0]);
   showOverlay(`<div class="panel"><h2>Two doors in the dark</h2><p class="tag">Choose what you will face.</p>
     <div class="choices">${opts.map(f => doorHtml(f)).join('')}</div></div>`);
   document.querySelectorAll('.door').forEach(d => d.onclick = () => { sfx('place'); hideOverlay(); startFight(d.dataset.f); });
 }
-function doorHtml(f) { const o = FOES[f]; return `<div class="door ${o.elite?'elite':''} ${o.boss?'boss':''}" data-f="${f}"><b>${o.n}</b><span class="hp">♥ ${o.hp}</span><small>${o.lore}</small></div>`; }
+const PORTRAITS = new Set(['pilgrim','moth','bell','choir','eater','king','hound','monk','knight','saint','witch','mother']);
+function doorHtml(f) { const o = FOES[f]; return `<div class="door ${o.elite?'elite':''} ${o.boss?'boss':''}" data-f="${f}"><i class="portrait${PORTRAITS.has(f)?'':' none'}" style="${PORTRAITS.has(f)?`background-image:url(assets/img/foes/${f}.webp)`:''}"></i><b>${o.n}</b><span class="hp">♥ ${o.hp}</span><small>${o.lore}</small></div>`; }
 
 /* ---------- fight ---------- */
 function startFight(fid) {
@@ -340,9 +349,9 @@ function hitFoe(n, from) {
 }
 async function checkFoeDead() {
   if (F.foe.hp > 0) {
-    if (F.fid === 'king' && !F.phase2 && F.foe.hp <= F.foe.maxHp / 2) {
+    if (F.foe.boss && !F.phase2 && F.foe.hp <= F.foe.maxHp / 2) {
       F.phase2 = true; F.darkMod = -2; F.foe.str += 2;
-      log('The King inhales the room. The dark deepens: light −2, his blows +2.'); sfx('breath'); wind = 1; render();
+      log(F.fid === 'king' ? 'The King inhales the room. The dark deepens: light −2, his blows +2.' : 'The Mother draws every flame toward her. The dark deepens: light −2, her blows +2.'); sfx('breath'); wind = 1; render();
     }
     return false;
   }
@@ -355,7 +364,7 @@ async function checkFoeDead() {
   S.deck = S.deck.filter(c => !c.tmp);
   // after a fight the wax settles: living parts firm up a little
   for (const p of ORDER) { const b = S.body[p]; if (b.wax > 0) b.wax = Math.min(b.max, b.wax + 3); }
-  if (F.foe.boss) { S.step++; renderPath(); endRun(true, 'The Unlit King gutters out. You are the last flame now.'); return true; }
+  if (F.foe.boss) { S.step++; renderPath(); endRun(true, F.fid === 'king' ? 'The Unlit King gutters out. You are the last flame now.' : 'The Candle Mother gutters out. Her children burn for you now.'); return true; }
   if (F.foe.elite) { S.body.heart.max += 3; S.body.heart.wax += 3; }
   S.step++;
   reward();
@@ -429,12 +438,14 @@ async function foeAct() {
 }
 
 /* ---------- rewards / shrines ---------- */
+/* painted candle sprites (assets/img/candles); ids without one keep the CSS candle */
+const SPRITE = { stub:'tallow', votive:'votive', weep:'weeping', martyr:'martyr', censer:'censer', briar:'briar', black:'black', bone:'bone', saint:'saint', pyre:'twinwick' };
 function cardHtml(c, extra = '') {
-  const d = CANDLES[c.id];
+  const d = CANDLES[c.id], sp = SPRITE[c.id];
   const base = d.s.map(s => `<em style="color:${SIG[s].c}">${SIG[s].n}</em> ${SIG[s].t}`);
   const fu = c.fused.length ? `<div class="f">✦ ${c.fused.map(s => SIG[s].n).join(' ✦ ')}</div>` : '';
   return `<div class="card ${extra}" data-uid="${c.uid}"><div class="cost">${d.cost}</div><div class="meta">☀${cardLight(c)} · ${d.wick}w</div>
-    <div class="glyph ${d.wax||''}"></div><div class="nm">${d.n}</div><div class="tx">${base.join('<br>')}${fu}</div></div>`;
+    <div class="glyph ${d.wax||''}${sp ? ' spr' : ''}"${sp ? ` style="background-image:url(assets/img/candles/candle_${sp}.webp)"` : ''}></div><div class="nm">${d.n}</div><div class="tx">${base.join('<br>')}${fu}</div></div>`;
 }
 function reward() {
   const ids = shuffle(REWARD_POOL.slice()).slice(0, 3);
@@ -642,7 +653,7 @@ function renderSockets(hot) {
 }
 function flashSock(p) { const s = $(`#effigy .sock[data-p="${p}"]`); if (!s) return; s.classList.remove('flash'); void s.offsetWidth; s.classList.add('flash'); }
 function seenFlash() {
-  const el = $('#seen'); el.querySelector('span').textContent = F.fid === 'king' ? 'HE CAN SEE YOU NOW' : 'IT CAN SEE YOU NOW';
+  const el = $('#seen'); el.querySelector('span').textContent = F.fid === 'king' ? 'HE CAN SEE YOU NOW' : F.fid === 'mother' || F.fid === 'saint' || F.fid === 'witch' ? 'SHE CAN SEE YOU NOW' : 'IT CAN SEE YOU NOW';
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); shake = Math.max(shake, 9); sfx('seen');
   trackOnce('first_blaze', { step: S.step, foe: F.fid });
 }
@@ -936,9 +947,13 @@ function frame(ts) {
   for (const p in partHit) partHit[p] *= .9;
   if (Math.abs(vis - lastVis) > .02) { lastVis = vis; $('#bgimg').style.opacity = (.28 + vis * .42).toFixed(2); $('#bgimg').style.filter = `saturate(${.6 + vis * .5}) brightness(${.7 + vis * .5})`; }
   const r = effRect();
+  // optional 3D stage (assets/stage3d.js, lazy): the title diorama and the foe; 2D art stays as the fallback
+  const ovlOn = $('#overlay').classList.contains('show');
+  const t3d = titleMode && r.width > 10 && window.TB3D && TB3D.ready('title');
+  const f3dReady = inFight && window.TB3D && TB3D.ready(F.fid), f3d = f3dReady && !ovlOn; // behind an overlay the 3D foe just rests
   // bg canvas
   bx.setTransform(DPR, 0, 0, DPR, sx * DPR, sy * DPR); bx.clearRect(-30, -30, W + 60, H + 60);
-  if (r.width > 10) {
+  if (r.width > 10 && !t3d) {
     drawBody(bx, r, vis);
     bx.save(); bx.globalCompositeOperation = 'source-atop'; bx.fillStyle = `rgba(11,10,8,${.62 - vis * .5})`; bx.fillRect(0, 0, W, H); bx.restore();
     bx.save(); bx.globalCompositeOperation = 'lighter';
@@ -946,8 +961,13 @@ function frame(ts) {
     for (const q of flames) glow(bx, q.x, q.y, r.height * .3, '255,150,60', .12 + vis * .05);
     bx.restore();
   }
-  if (inFight) { foeAnim.appear = Math.min(1, foeAnim.appear + .02); const fc = foeCenter(), fr = $('#foe').getBoundingClientRect(); drawFoe(bx, fc.x, fc.y + 10, Math.min(1.25, fr.height / 250, fr.width / 340) * (.9 + foeAnim.appear * .1), vis * foeAnim.appear); }
+  if (inFight) { foeAnim.appear = Math.min(1, foeAnim.appear + .02); const fc = foeCenter(), fr = $('#foe').getBoundingClientRect();
+    if (f3d) { const pad = Math.min(fr.width, fr.height) * .08; TB3D.frame({ mode: 'foe', fid: F.fid, rect: { x: fr.left - pad, y: fr.top - pad, w: fr.width + pad * 2, h: fr.height + pad * 2 }, vis, hit: foeAnim.hit, lunge: foeAnim.lunge, seeing: band(l) === 'blaze', dead: F.foe.hp <= 0, alpha: foeAnim.appear }, ts); }
+    else if (!f3dReady) drawFoe(bx, fc.x, fc.y + 10, Math.min(1.25, fr.height / 250, fr.width / 340) * (.9 + foeAnim.appear * .1), vis * foeAnim.appear); }
   else if (titleMode) { foeAnim.shape = 'king'; drawFoe(bx, W / 2, H * .18, Math.min(1.1, H / 700), .2 + Math.sin(T * .5) * .08); }
+  if (t3d) { const gap = document.querySelector('.tp-gap'), gb = gap ? Math.min(r.bottom, gap.getBoundingClientRect().bottom + 6) : r.bottom;
+    const w = Math.min(W, r.width * 2.4), h = Math.min(gb, r.height * 1.12); TB3D.frame({ mode: 'title', rect: { x: (W - w) / 2, y: gb - h, w, h }, vis }, ts); }
+  else if (!f3d && window.TB3D) TB3D.frame(null, ts);
   const vg = bx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .28, W / 2, H / 2, Math.max(W, H) * .78);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${.82 - vis * .3})`); bx.fillStyle = vg; bx.fillRect(-30, -30, W + 60, H + 60);
   if (inFight && band(l) === 'blaze') { bx.fillStyle = `rgba(110,20,35,${.08 + Math.sin(T * 3) * .04})`; bx.fillRect(-30, -30, W + 60, H + 60); }
@@ -971,7 +991,7 @@ function frame(ts) {
       if (Math.random() < .05) embers.push({ x: q.x, y: q.y - hgt - 14, vx: (Math.random() - .5) * .6 + wind * 2, vy: -.5 - Math.random(), life: 1, c: cl < 0 ? '#9a86c0' : '#ffb35a' });
     }
   }
-  if (titleMode && r.width > 10) { const sc = r.height / 560; ORDER.forEach((p, k) => { const q = sockPos(p), hh = (30 + (k % 3) * 10) * sc, lit = T - titleT0 - .5 - k * .22; drawCandle(fxx, q.x, q.y, hh, 15 * sc + 4, k === 3 ? 'red' : '', []); if (lit > 0) { drawFlame(fxx, q.x, q.y - hh - 4, Math.max(.7, sc) * .95 * Math.min(1, .35 + lit * 2.2), k * 2.1, false); if (lit < .12) for (let e = 0; e < 3; e++) embers.push({ x: q.x, y: q.y - hh - 8, vx: (Math.random() - .5) * 1.4, vy: -.8 - Math.random(), life: 1, c: '#ffb35a' }); } }); }
+  if (titleMode && r.width > 10 && !t3d) { const sc = r.height / 560; ORDER.forEach((p, k) => { const q = sockPos(p), hh = (30 + (k % 3) * 10) * sc, lit = T - titleT0 - .5 - k * .22; drawCandle(fxx, q.x, q.y, hh, 15 * sc + 4, k === 3 ? 'red' : '', []); if (lit > 0) { drawFlame(fxx, q.x, q.y - hh - 4, Math.max(.7, sc) * .95 * Math.min(1, .35 + lit * 2.2), k * 2.1, false); if (lit < .12) for (let e = 0; e < 3; e++) embers.push({ x: q.x, y: q.y - hh - 8, vx: (Math.random() - .5) * 1.4, vy: -.8 - Math.random(), life: 1, c: '#ffb35a' }); } }); }
   for (let k = bolts.length - 1; k >= 0; k--) { const b = bolts[k]; b.life -= .06; if (b.life <= 0) { bolts.splice(k, 1); continue; }
     const q = foeCenter(); fxx.strokeStyle = `rgba(255,190,110,${b.life * .75})`; fxx.lineWidth = 2.5 * b.life; fxx.shadowColor = '#ff8a3c'; fxx.shadowBlur = 12; fxx.beginPath(); fxx.moveTo(b.p.x, b.p.y);
     fxx.quadraticCurveTo((b.p.x + q.x) / 2 + (Math.random() - .5) * 40, Math.min(b.p.y, q.y) - 40, q.x, q.y); fxx.stroke(); fxx.shadowBlur = 0; }
@@ -1016,6 +1036,8 @@ track('opened', { ref: document.referrer ? new URL(document.referrer).hostname :
 buildSocketsTitle();
 function buildSocketsTitle() { const body = {}; for (const p of ORDER) body[p] = { wax: PARTS[p].max, max: PARTS[p].max }; S = null; }
 title();
+/* lazy 3D stage: fetched after the title is up; the 2D art is used until (and unless) it is ready */
+if (location.protocol !== 'file:' && !/[?&]no3d\b/.test(location.search)) setTimeout(() => { const sc = document.createElement('script'); sc.src = 'assets/stage3d.js'; sc.async = true; sc.onload = () => { if (window.TB3D) { TB3D.ready('title'); TB3D.preload(['pilgrim']); } }; document.head.appendChild(sc); }, 250);
 
 /* test hook */
 window.TB = { get S() { return S; }, get F() { return F; }, lightNow, band, CANDLES, SIG, PARTS, ORDER, FLOW, FUNNEL_KEY, endTurn, playCard, canPlay, applyMode, setLean, recast,
