@@ -268,3 +268,59 @@ button{font-family:var(--cap);color:var(--bone);cursor:pointer}
 .card{border-color:#6a5434;background:linear-gradient(160deg,#30271d,#1a140f 60%,#120e0a)}
 #intent.hidden{color:#c3b3e6;font-style:italic;border-color:#4a3f66;background:#16121fcc}
 #path span.now{box-shadow:0 0 0 2px #ffb34755,0 0 18px #ff8a2a88}
+
+/* v3: phone hand fits the screen (no sideways scroll): width + overlap set by fitHand() */
+@media (max-width:640px), (max-aspect-ratio:1/1){
+  #hand{overflow:visible;justify-content:center;gap:6px;padding:16px 3px 4px}
+  #hand .card{width:var(--cw,100px);height:147px;aspect-ratio:auto}
+  #hand .card + .card{margin-left:calc(-1 * var(--ov,0px))}
+  #hand.fan .card{box-shadow:-6px 0 12px #000a}
+  #hand .card.sel{z-index:3}
+  #hand .card.ghost{z-index:0}
+}
+#app{grid-template-columns:minmax(0,1fr)}
+@media (max-width:380px){ #top{gap:5px;padding-left:8px;padding-right:8px} #path{gap:3px;min-width:0} #path span{width:21px;height:21px;font-size:10px} #dial svg{width:74px;height:42px} #mute{flex:0 0 auto} }
+/* v3 first impressions: the title shows the body you will play, candles kindle one by one */
+#overlay.titleov{background:radial-gradient(ellipse 40% 44% at 50% 54%,#0B0A0800,#0B0A0855 55%,#0B0A08e8 88%);backdrop-filter:none}
+.titlepanel{display:flex;flex-direction:column;justify-content:space-between;min-height:calc(100dvh - 40px);width:100%;max-width:980px}
+.titlepanel .tp-gap{flex:1 1 auto;min-height:26vh}
+.titlepanel h1{filter:drop-shadow(0 0 26px #ff7a1a88) drop-shadow(0 4px 0 #0008)}
+.titlepanel .rules{margin:0 auto 18px}
+.titlepanel .rules div{background:#0f0c09e6;color:#d8c9a8;font-size:16px;line-height:1.4}
+.titlepanel .tag{margin-bottom:0}
+.rules1{display:none}
+@media (max-width:640px), (max-aspect-ratio:1/1){
+  .titlepanel .rules{display:none}
+  .rules1{display:block;margin:0 auto 16px;max-width:300px;font-size:18px;line-height:1.35;color:var(--bone);text-shadow:0 2px 8px #000}
+  .titlepanel .tp-gap{min-height:44vh}
+}
+/* sockets you can drop into glow; the rest step back while a candle is held */
+.sock.target{border:2px solid #FFB347;background:radial-gradient(#FF9A2E2e,transparent 70%);box-shadow:0 0 18px #FF8A1E77;animation:tpulse .9s ease-in-out infinite alternate}
+@keyframes tpulse{to{box-shadow:0 0 28px #FF8A1Eaa;background:radial-gradient(#FF9A2E44,transparent 72%)}}
+#effigy.choosing .sock:not(.target):not(.hot){opacity:.35}
+/* nothing left to do this turn: Burn breathes */
+#endBtn.ready{animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 34px #C1272Dbb,0 0 0 2px #ff6b4a66;filter:brightness(1.18)}}
+/* phone: narrow cards wrap rather than clip */
+@media (max-width:640px), (max-aspect-ratio:1/1){
+  #hand .card{padding:5px 4px}
+  #hand .card .nm{font-size:10px;line-height:1.1;letter-spacing:.04em}
+  #hand .card .tx{font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+  #hand .card .meta{font-size:9px;right:3px}
+}
+.sock.invite{border:2px solid #FFB34799;background:radial-gradient(#FF9A2E22,transparent 70%);animation:tpulse 1.1s ease-in-out infinite alternate}
+
+/* desktop: a very full hand overlaps like a held fan instead of scrolling */
+
+#hand.fan .card + .card{margin-left:calc(-1 * var(--ov,0px))}
+#hand.fan .card{box-shadow:-6px 0 12px #000a}
+#hand.fan .card:hover{z-index:4}
+
+/* r2: the log line only speaks while a card is selected (or a Pinch/Recast target is being picked) */
+#log{transition:opacity .18s}
+#log.quiet{opacity:0;visibility:hidden}
+@media (max-width:640px), (max-aspect-ratio:1/1){ #log.quiet{display:none} }
+/* r2 beauty pass */
+#endBtn{background:linear-gradient(180deg,#A3162D,#7A0E20);letter-spacing:.12em;box-shadow:0 8px 20px #A3162D73}
+#hand .card .tx{color:#E8DCC2}
+body:has(#coach.show) #log{visibility:hidden}

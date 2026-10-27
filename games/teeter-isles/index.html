@@ -150,6 +150,33 @@ h2 small,#lvlname small{display:block;font-family:var(--ui);font-size:11px;lette
  .tag .who i{display:none}
 }
 @media (max-height:520px){ #gaugebox,#gauge{width:90px;height:90px} #hint{top:110px} }
+/* v3 first-impression pass */
+#title{transform-origin:50% 80%;will-change:transform}
+.menubtns .primary{font-size:24px;padding:.6em .8em;min-height:68px;line-height:1.05}
+.menubtns .primary small{display:block;font-family:var(--ui);font-size:12.5px;font-weight:700;letter-spacing:.02em;opacity:.9;margin-top:3px}
+.menubtns button:not(.primary){background:rgba(255,255,255,.6);box-shadow:none;font-size:14px;color:var(--ink2);border:1.5px solid rgba(107,90,122,.18)}
+#menustars{color:#8a6d2a}
+#tiltdeg{white-space:nowrap}
+#tiltdeg i{font-style:normal;font-weight:700;font-size:10px;margin-left:5px;text-transform:uppercase;letter-spacing:.08em;opacity:.92}
+#introfolk .chips{display:flex;flex-wrap:wrap;gap:6px}
+.folk{background:#fff;border-radius:999px;padding:3px 10px 3px 8px;font-size:12.5px;font-weight:700;color:var(--ink);box-shadow:0 1px 0 rgba(51,40,74,.08)}
+.folk::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--coral);margin-right:6px;vertical-align:0}
+.folk:nth-child(2)::before{background:var(--grass)}.folk:nth-child(3)::before{background:#7a8fd6}
+#introgoal{align-items:center}
+#introgoal .goal{flex-basis:100%;margin:0 0 4px;font-size:15px;color:var(--ink)}
+#introgoal em{font-style:normal;font-weight:600;font-size:12px;color:var(--ink2)}
+/* r2 beauty pass: full island names on phones, softer premium tray, 44px touch targets */
+#queue{background:rgba(255,251,245,.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid #fff;box-shadow:0 14px 34px rgba(80,60,120,.20)}
+#tools button{min-height:44px;min-width:44px}
+#tools button:active,.menubtns button:active{transform:scale(.97);transition:transform .12s}
+.menubtns .primary{box-shadow:0 10px 22px rgba(244,63,127,.32),inset 0 1px 0 rgba(255,255,255,.55)}
+@media (max-width:640px){
+ #lvlname{font-size:13px;max-width:46vw;letter-spacing:-.01em;overflow:visible;text-overflow:clip}
+ #lvlname small{font-size:9.5px;letter-spacing:.12em;margin-bottom:1px}
+ #people{padding-left:9px;padding-right:9px}
+ #tools{gap:5px;padding-right:50px;flex-wrap:nowrap} #tools button{padding:.5em .62em} #tools .ex{font-size:0;gap:3px} #tools .ex .ico{width:24px;height:24px} #tools .ex b{font-size:12px}
+ #btnundo span{display:none} #btnundo{font-size:16px}
+}
 </style>
 </head>
 <body>
@@ -208,7 +235,7 @@ h2 small,#lvlname small{display:block;font-family:var(--ui);font-size:11px;lette
       <button id="btnturn" title="Turn house (R)">⟳ Turn</button>
       <button id="btnrotl" title="Rotate view (Q)" aria-label="Rotate view left">◀</button>
       <button id="btnrotr" title="Rotate view (E)" aria-label="Rotate view right">▶</button>
-      <button id="btnundo">↶ Undo</button>
+      <button id="btnundo" aria-label="Undo (once per island)" title="Undo (once per island)">↶ Undo</button>
     </div>
   </div>
 </div>

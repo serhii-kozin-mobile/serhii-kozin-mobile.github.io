@@ -534,6 +534,28 @@ function coachTick() {
 }
 /* ---------- DOM render ---------- */
 function log(t) { $('#log').textContent = t; }
+/* selection/mode prompts are state, not history: drop them as soon as the state they describe is gone */
+function idleHint() { const can = F.hand.some(c => CANDLES[c.id].cost <= F.tallow) && ORDER.some(p => alive(p) && !F.board[p]); return can ? 'Drag a candle onto your body, or end the turn.' : 'Nothing more to light. End the turn.'; }
+/* phone: the whole hand always fits on screen. Narrow the cards first, then let them overlap like a held fan. */
+const PHONE = matchMedia('(max-width:640px), (max-aspect-ratio:1/1)');
+function fitHand() {
+  const h = $('#hand'); if (!h) return;
+  if (!PHONE.matches) { h.style.removeProperty('--cw'); h.style.removeProperty('--ov'); h.classList.remove('fan'); const n = h.children.length; if (n > 1 && h.scrollWidth > h.clientWidth + 1) { const cw = h.children[0].getBoundingClientRect().width, cs = getComputedStyle(h), avail = h.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 6, gap = parseFloat(cs.columnGap) || 0; h.style.setProperty('--ov', Math.max(0, (n * cw + (n - 1) * gap - avail) / (n - 1)).toFixed(1) + 'px'); h.classList.add('fan'); } return; }
+  const n = h.children.length; if (!n) return;
+  const cs = getComputedStyle(h), avail = h.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 6, gap = 5;
+  const w = Math.max(66, Math.min(100, (avail - (n - 1) * gap) / n));
+  const ov = n > 1 ? Math.max(0, (n * w + (n - 1) * gap - avail) / (n - 1)) : 0;
+  h.style.setProperty('--cw', w.toFixed(1) + 'px'); h.style.setProperty('--ov', ov.toFixed(1) + 'px');
+  h.classList.toggle('fan', ov > 0);
+}
+addEventListener('resize', () => fitHand());
+function syncBurn() { const b = $('#endBtn'); if (!b) return; const idle = F && !F.busy && F.sel == null && !F.mode && !(F.hand.some(c => CANDLES[c.id].cost <= F.tallow) && ORDER.some(p => alive(p) && !F.board[p])); b.classList.toggle('ready', !!idle); $('#effigy').classList.toggle('choosing', !!(F && F.sel != null && !F.busy)); }
+/* the prompt line speaks only while you are choosing (a card held/selected, or Pinch/Recast picking a target) */
+function syncLog() { const l = $('#log'); if (l) l.classList.toggle('quiet', !(F && !F.busy && (F.sel != null || F.mode))); }
+function syncPrompt() {
+  const t = $('#log').textContent;
+  if ((t.startsWith('Drop the ') && F.sel == null) || (t.startsWith('Pinch which') && F.mode !== 'pinch') || (t.startsWith('Scoop the pool (') && F.mode !== 'recast')) log(idleHint());
+}
 function showOverlay(h) { const o = $('#overlay'); o.innerHTML = h; o.classList.add('show'); $('#seen').classList.remove('show'); }
 function hideOverlay() { $('#overlay').classList.remove('show'); }
 function buildSockets() {
@@ -586,7 +608,7 @@ function render() {
   $('#recastBtn').disabled = F.busy || F.tallow < 1 || S.pool < 2;
   $('#pinchBtn').classList.toggle('on', F.mode === 'pinch');
   $('#recastBtn').classList.toggle('on', F.mode === 'recast');
-  coachTick();
+  fitHand(); syncPrompt(); syncBurn(); syncLog(); coachTick();
 }
 function renderSockets(hot) {
   const ef = $('#effigy'); if (!ef.children.length) return;
@@ -626,7 +648,7 @@ function seenFlash() {
 }
 
 /* ---------- input: click, tap, drag & drop ---------- */
-function onCard(k) { if (!F || F.busy) return; audioInit(); F.mode = null; F.sel = F.sel === k ? null : k; if (F.sel != null) { log('Drop it into a socket of your body.'); sfx('pick'); } render(); }
+function onCard(k) { if (!F || F.busy) return; audioInit(); F.mode = null; F.sel = F.sel === k ? null : k; if (F.sel != null) { log(`Drop the ${CANDLES[F.hand[k].id].n} into a socket of your body.`); sfx('pick'); } render(); }
 function onSock(p) {
   if (!F || F.busy) return; audioInit();
   if (F.mode) return applyMode(p);
@@ -655,7 +677,7 @@ addEventListener('pointermove', e => {
     drag.on = true; F.mode = null; F.sel = drag.k;
     const r = drag.el.getBoundingClientRect();
     drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.remove('sel', 'poor'); drag.ghost.style.width = r.width + 'px';
-    $('#drag').appendChild(drag.ghost); drag.el.classList.add('ghost'); drag.w = r.width; drag.h = r.height; sfx('pick');
+    $('#drag').appendChild(drag.ghost); drag.el.classList.add('ghost'); drag.w = r.width; drag.h = r.height; sfx('pick'); $('#effigy').classList.add('choosing'); log(`Drop the ${CANDLES[F.hand[drag.k].id].n} into a socket of your body.`); syncLog(); renderSockets(null);
   }
   if (drag.on) {
     const oy = drag.touch ? 70 : 0;
@@ -902,7 +924,7 @@ function drawFlame(ctx, x, y, s, seed, dark) {
   ctx.fillStyle = 'rgba(80,140,255,.5)'; ctx.beginPath(); ctx.ellipse(x, y - 2, w * .45, w * .5, 0, 0, Math.PI * 2); ctx.fill();
 }
 function glow(ctx, x, y, rad, col, a) { const g = ctx.createRadialGradient(x, y, 0, x, y, rad); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill(); }
-let titleMode = true, lastVis = -1;
+let titleMode = true, lastVis = -1, titleT0 = 0;
 function frame(ts) {
   T = ts / 1000;
   const inFight = F && !titleMode;
@@ -920,7 +942,7 @@ function frame(ts) {
     drawBody(bx, r, vis);
     bx.save(); bx.globalCompositeOperation = 'source-atop'; bx.fillStyle = `rgba(11,10,8,${.62 - vis * .5})`; bx.fillRect(0, 0, W, H); bx.restore();
     bx.save(); bx.globalCompositeOperation = 'lighter';
-    const flames = inFight ? ORDER.filter(p => F.board[p] && F.board[p].card.id !== 'ash').map(p => candleTop(p)) : ORDER.map(p => { const q = sockPos(p); return { x: q.x, y: q.y - r.height * .06 }; });
+    const flames = inFight ? ORDER.filter(p => F.board[p] && F.board[p].card.id !== 'ash').map(p => candleTop(p)) : ORDER.filter((p, k) => T - titleT0 - .5 - k * .22 > 0).map(p => { const q = sockPos(p); return { x: q.x, y: q.y - r.height * .06 }; });
     for (const q of flames) glow(bx, q.x, q.y, r.height * .3, '255,150,60', .12 + vis * .05);
     bx.restore();
   }
@@ -949,7 +971,7 @@ function frame(ts) {
       if (Math.random() < .05) embers.push({ x: q.x, y: q.y - hgt - 14, vx: (Math.random() - .5) * .6 + wind * 2, vy: -.5 - Math.random(), life: 1, c: cl < 0 ? '#9a86c0' : '#ffb35a' });
     }
   }
-  if (titleMode && r.width > 10) { const sc = r.height / 560; ORDER.forEach((p, k) => { const q = sockPos(p); drawCandle(fxx, q.x, q.y, (30 + (k % 3) * 10) * sc, 15 * sc + 4, k === 3 ? 'red' : '', []); drawFlame(fxx, q.x, q.y - (30 + (k % 3) * 10) * sc - 4, Math.max(.7, sc) * .95, k * 2.1, false); }); }
+  if (titleMode && r.width > 10) { const sc = r.height / 560; ORDER.forEach((p, k) => { const q = sockPos(p), hh = (30 + (k % 3) * 10) * sc, lit = T - titleT0 - .5 - k * .22; drawCandle(fxx, q.x, q.y, hh, 15 * sc + 4, k === 3 ? 'red' : '', []); if (lit > 0) { drawFlame(fxx, q.x, q.y - hh - 4, Math.max(.7, sc) * .95 * Math.min(1, .35 + lit * 2.2), k * 2.1, false); if (lit < .12) for (let e = 0; e < 3; e++) embers.push({ x: q.x, y: q.y - hh - 8, vx: (Math.random() - .5) * 1.4, vy: -.8 - Math.random(), life: 1, c: '#ffb35a' }); } }); }
   for (let k = bolts.length - 1; k >= 0; k--) { const b = bolts[k]; b.life -= .06; if (b.life <= 0) { bolts.splice(k, 1); continue; }
     const q = foeCenter(); fxx.strokeStyle = `rgba(255,190,110,${b.life * .75})`; fxx.lineWidth = 2.5 * b.life; fxx.shadowColor = '#ff8a3c'; fxx.shadowBlur = 12; fxx.beginPath(); fxx.moveTo(b.p.x, b.p.y);
     fxx.quadraticCurveTo((b.p.x + q.x) / 2 + (Math.random() - .5) * 40, Math.min(b.p.y, q.y) - 40, q.x, q.y); fxx.stroke(); fxx.shadowBlur = 0; }
@@ -977,14 +999,18 @@ requestAnimationFrame(frame);
 /* ---------- title ---------- */
 function title() {
   titleMode = true; $('#app').style.visibility = 'hidden';
-  showOverlay(`<div class="panel"><h1>TALLOWBORN</h1><p class="tag">You are the candle. Burn well.</p>
-    <div class="rules">
-      <div><b>Burn</b>Your wax body has six sockets. Drag candles into them. Each one fires every turn, and burns down.</div>
-      <div><b>Drip</b>A spent candle runs down your body and <i>fuses its power into the candle below it</i>, forever. Lean to steer the wax.</div>
-      <div><b>Be seen</b>More light, harder blows. But in Blaze it sees your heart. Lost limbs lose sockets: scoop the floor to re-cast them.</div>
+  titleT0 = T;
+  showOverlay(`<div class="panel titlepanel"><div class="tp-top"><h1>TALLOWBORN</h1><p class="tag">You are the candle. Burn well.</p></div>
+    <div class="tp-gap" aria-hidden="true"></div>
+    <div class="tp-bot"><div class="rules">
+      <div><b>Burn</b>Drag candles into your six sockets. Every lit candle fires each turn.</div>
+      <div><b>Drip</b>Spent wax runs down and <i>fuses its power into the candle below</i>. Lean to steer it.</div>
+      <div><b>Be seen</b>More light, harder blows. In Blaze, it aims for your heart.</div>
     </div>
-    <button class="big" id="go">Kindle</button><div class="small">7 doors · about 15 minutes · sound on ♪ · drag or tap</div></div>`);
-  $('#go').onclick = () => { audioInit(); titleMode = false; $('#app').style.visibility = ''; hideOverlay(); newRun(); };
+    <p class="rules1">Drag candles onto your wax body. Burn. Survive seven doors.</p>
+    <button class="big" id="go">Kindle</button><div class="small">7 doors · about 15 minutes · sound on ♪ · drag or tap</div></div></div>`);
+  $('#overlay').classList.add('titleov');
+  $('#go').onclick = () => { audioInit(); $('#overlay').classList.remove('titleov'); titleMode = false; $('#app').style.visibility = ''; hideOverlay(); newRun(); };
 }
 track('opened', { ref: document.referrer ? new URL(document.referrer).hostname : '', w: innerWidth });
 buildSocketsTitle();
@@ -993,4 +1019,4 @@ title();
 
 /* test hook */
 window.TB = { get S() { return S; }, get F() { return F; }, lightNow, band, CANDLES, SIG, PARTS, ORDER, FLOW, FUNNEL_KEY, endTurn, playCard, canPlay, applyMode, setLean, recast,
-  setMode: m => { F.mode = m; } };
+  setMode: m => { F.mode = m; }, render };
