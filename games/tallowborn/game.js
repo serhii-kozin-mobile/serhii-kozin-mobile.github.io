@@ -70,6 +70,10 @@ const FOES = {
   knight: { n:'Bone Knight', hp:80, lore:'Armoured in old ribs. Hits slow and hard.', pat:[['ward',8],['heavy',12],['strike',7],['sever',9]], shape:'hood' },
   saint:  { n:'Drowned Saint', hp:70, lore:'Her halo drips. Every song leaves ash.', pat:[['smother',1],['strike',9],['ward',6],['multi',4,2]], shape:'choir' },
   witch:  { n:'Tallow Witch', hp:64, lore:'She stirs spilled wax back into curses.', pat:[['smother',1],['multi',2,4],['breath'],['strike',9],['ward',6]], shape:'hood' },
+  // r5: more later-run foes (run 1 still unchanged)
+  ringer: { n:'Hollow Ringer', hp:76, lore:'Each toll of its cracked bell snuffs a flame.', pat:[['breath'],['multi',3,3],['strike',9],['smother',1],['ward',6]], shape:'bell' },
+  wraith: { n:'Lantern Wraith', hp:66, lore:'It carries a lantern that drinks your light.', pat:[['smother',1],['strike',8],['multi',2,4],['ward',6],['strike',9]], shape:'hood' },
+  golem:  { n:'The Wax Golem', hp:140, elite:true, lore:'Poured from a thousand melted pews. Slow, then crushing.', pat:[['ward',10],['sever',10],['multi',3,2],['heavy',12],['ward',8],['strike',12]], shape:'maw' },
   mother: { n:'The Candle Mother', hp:300, boss:true, lore:'Every candle was her child once. She wants them back.', pat:[['multi',4,3],['smother',2],['heavy',16],['breath'],['strike',12],['sever',12],['ward',14],['strike',10]], shape:'king' },
   king:   { n:'The Unlit King', hp:300, boss:true, lore:'He was the last flame. He forgot why.', pat:[['strike',10],['breath'],['heavy',16],['smother',2],['multi',5,3],['sever',12],['strike',12],['ward',14]], shape:'king' },
 };
@@ -103,7 +107,7 @@ function fury() { return LIMBS.filter(p => !alive(p)).length; }
 function newRun() {
   rnd = mulberry32(S ? (SEED + (S.runNo||0) * 7919) >>> 0 : SEED);
   const runNo = S ? (S.runNo||0) + 1 : Math.max(1, +Q.get('run') || 1); // ?run=N previews a later run's path (testing)
-  const later = runNo > 1, mid = later ? shuffle(['moth','bell','choir','monk','knight','saint','witch']) : shuffle(['moth','bell','choir']);
+  const later = runNo > 1, mid = later ? shuffle(['moth','bell','choir','monk','knight','saint','witch','ringer','wraith']) : shuffle(['moth','bell','choir']);
   const body = {}; for (const p of ORDER) body[p] = { wax: PARTS[p].max, max: PARTS[p].max };
   S = {
     runNo, body, pool: 0, step: 0,
@@ -113,7 +117,7 @@ function newRun() {
       { type:'fight', foes:[mid[0], mid[1]] },
       { type:'shrine' },
       { type:'fight', foes: later ? [mid[2], mid[3]] : [mid[2], mid[0] === 'moth' ? 'bell' : 'moth'].filter((v,i,a)=>a.indexOf(v)===i) },
-      { type:'fight', foes:['eater'] },
+      { type:'fight', foes:[later && runNo % 2 === 1 ? 'golem' : 'eater'] }, // r5: the Wax Golem holds the elite door on odd later runs
       { type:'shrine' },
       { type:'fight', foes:[later && runNo % 2 === 0 ? 'mother' : 'king'] },
     ],
@@ -152,7 +156,7 @@ function nextStep() {
     <div class="choices">${opts.map(f => doorHtml(f)).join('')}</div></div>`);
   document.querySelectorAll('.door').forEach(d => d.onclick = () => { sfx('place'); hideOverlay(); startFight(d.dataset.f); });
 }
-const PORTRAITS = new Set(['pilgrim','moth','bell','choir','eater','king','hound','monk','knight','saint','witch','mother']);
+const PORTRAITS = new Set(['pilgrim','moth','bell','choir','eater','king','hound','monk','knight','saint','witch','mother','ringer','wraith','golem']);
 function doorHtml(f) { const o = FOES[f]; return `<div class="door ${o.elite?'elite':''} ${o.boss?'boss':''}" data-f="${f}"><i class="portrait${PORTRAITS.has(f)?'':' none'}" style="${PORTRAITS.has(f)?`background-image:url(assets/img/foes/${f}.webp)`:''}"></i><b>${o.n}</b><span class="hp">♥ ${o.hp}</span><small>${o.lore}</small></div>`; }
 
 /* ---------- fight ---------- */
@@ -450,7 +454,7 @@ function cardHtml(c, extra = '') {
 function reward() {
   const ids = shuffle(REWARD_POOL.slice()).slice(0, 3);
   const cs = ids.map(mkCard);
-  const elite = FOES[F.fid].elite ? '<p class="tag">The Wick-Eater falls. Your heart hardens: +3 max wax.</p>' : '';
+  const elite = FOES[F.fid].elite ? `<p class="tag">${FOES[F.fid].n} falls. Your heart hardens: +3 max wax.</p>` : '';
   showOverlay(`<div class="panel"><h2>Wax remains</h2>${elite}<p class="tag">Take one candle into your body's store.</p>
     <div class="choices">${cs.map(c => cardHtml(c)).join('')}</div><button class="skip">Take nothing</button></div>`);
   document.querySelectorAll('#overlay .card').forEach(el => el.onclick = () => {
